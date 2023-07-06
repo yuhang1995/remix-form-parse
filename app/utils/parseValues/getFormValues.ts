@@ -1,18 +1,30 @@
 import { set } from "react-hook-form"
-import qs from "qs"
+type FormValues = Record<string, string | string[]>
 
-function formDataToURlSearchParams(formData: FormData) {
-    return new URLSearchParams(formData as any)
+function parseData<T extends FormValues, U extends FormData | URLSearchParams>(
+    data: U
+): T {
+    const result: Partial<T> = {}
+
+    for (const [key, value] of data.entries()) {
+        if (result.hasOwnProperty(key)) {
+            if (Array.isArray(result[key])) {
+                (result[key] as string[]).push(value as string)
+            } else {
+                (result[key] as string[]) = [result[key] as string, value as string]
+            }
+        } else {
+            result[key] = value as string
+        }
+    }
+
+    return result as T
 }
 
-export function getFormValues(data: URLSearchParams | FormData) {
-    // const result = Object.fromEntries(data)
-    const searchParamsStr =
-        data instanceof URLSearchParams
-            ? data.toString()
-            : formDataToURlSearchParams(data).toString()
-
-    const result = qs.parse(searchParamsStr)
+export function getFormValues<T extends FormValues>(
+    data: URLSearchParams | FormData
+): T {
+    const result = parseData(data)
 
     const values = {}
 
@@ -20,7 +32,7 @@ export function getFormValues(data: URLSearchParams | FormData) {
         set(values, name, value)
     })
 
-    return values
+    return values as T
 }
 
 export async function getFormData(request: Request) {
